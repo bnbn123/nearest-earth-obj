@@ -21,6 +21,7 @@ class NEODatabase:
     help fetch NEOs by primary designation or by name and to help speed up
     querying for close approaches that match criteria.
     """
+
     def __init__(self, neos, approaches):
         """Create a new `NEODatabase`.
 
@@ -42,9 +43,18 @@ class NEODatabase:
         self._neos = neos
         self._approaches = approaches
 
-        # TODO: What additional auxiliary data structures will be useful?
+        self._grouped_by_designation_neo = {}
+        self.grouped_by_name_neo = {}
 
-        # TODO: Link together the NEOs and their close approaches.
+        for neo in self._neos:
+            self._grouped_by_designation_neo[neo.designation] = neo
+            # Not every NEO got a name.
+            if neo.name:
+                self.grouped_by_name_neo[neo.name] = neo
+        for approach in self._approaches:
+            neo = self._grouped_by_designation_neo[approach._designation]
+            approach.neo = neo
+            neo.approaches.append(approach)
 
     def get_neo_by_designation(self, designation):
         """Find and return an NEO by its primary designation.
@@ -59,7 +69,8 @@ class NEODatabase:
         :param designation: The primary designation of the NEO to search for.
         :return: The `NearEarthObject` with the desired primary designation, or `None`.
         """
-        # TODO: Fetch an NEO by its primary designation.
+        if designation in self._grouped_by_designation_neo:
+            return self._grouped_by_designation_neo[designation]
         return None
 
     def get_neo_by_name(self, name):
@@ -76,7 +87,8 @@ class NEODatabase:
         :param name: The name, as a string, of the NEO to search for.
         :return: The `NearEarthObject` with the desired name, or `None`.
         """
-        # TODO: Fetch an NEO by its name.
+        if name in self.grouped_by_name_neo:
+            return self.grouped_by_name_neo[name]
         return None
 
     def query(self, filters=()):
@@ -93,6 +105,7 @@ class NEODatabase:
         :param filters: A collection of filters capturing user-specified criteria.
         :return: A stream of matching `CloseApproach` objects.
         """
-        # TODO: Generate `CloseApproach` objects that match all of the filters.
         for approach in self._approaches:
-            yield approach
+            hasValue = False in map(lambda x: x(approach), filters)
+            if not hasValue:
+                yield approach
