@@ -43,18 +43,20 @@ class NEODatabase:
         self._neos = neos
         self._approaches = approaches
 
-        self._grouped_by_designation_neo = {}
-        self.grouped_by_name_neo = {}
-
+        self._neos_by_designation = {}
+        self._neos_by_name = {}
+        # Create a dictionary of NEOs by their primary designation and name
         for neo in self._neos:
-            self._grouped_by_designation_neo[neo.designation] = neo
+            self._neos_by_designation[neo.designation] = neo
             # Not every NEO got a name.
             if neo.name:
-                self.grouped_by_name_neo[neo.name] = neo
+                self._neos_by_name[neo.name] = neo
+        # Link each close approach to its corresponding NEO
         for approach in self._approaches:
-            neo = self._grouped_by_designation_neo[approach._designation]
-            approach.neo = neo
-            neo.approaches.append(approach)
+            # Use the primary designation of the NEO to link the approach
+            approach.neo = self._neos_by_designation[approach._designation]
+            # Add the approach to the list of approaches for the corresponding NEO
+            approach.neo.approaches.append(approach)
 
     def get_neo_by_designation(self, designation):
         """Find and return an NEO by its primary designation.
@@ -69,8 +71,8 @@ class NEODatabase:
         :param designation: The primary designation of the NEO to search for.
         :return: The `NearEarthObject` with the desired primary designation, or `None`.
         """
-        if designation in self._grouped_by_designation_neo:
-            return self._grouped_by_designation_neo[designation]
+        if designation in self._neos_by_designation:
+            return self._neos_by_designation[designation]
         return None
 
     def get_neo_by_name(self, name):
@@ -87,8 +89,8 @@ class NEODatabase:
         :param name: The name, as a string, of the NEO to search for.
         :return: The `NearEarthObject` with the desired name, or `None`.
         """
-        if name in self.grouped_by_name_neo:
-            return self.grouped_by_name_neo[name]
+        if name in self._neos_by_name:
+            return self._neos_by_name[name]
         return None
 
     def query(self, filters=()):
@@ -106,6 +108,7 @@ class NEODatabase:
         :return: A stream of matching `CloseApproach` objects.
         """
         for approach in self._approaches:
-            hasValue = False in map(lambda x: x(approach), filters)
-            if not hasValue:
+            # Check if all filters evaluate to True for the current approach
+            # Use a lambda function to create a simple function that takes an argument filter_func and applies it to the approach object
+            if all(filter_func(approach) for filter_func in filters):
                 yield approach
